@@ -55,7 +55,7 @@ module spart(
         endcase
     end
 
-    localparam [15:0] DIV = 16'd1280;
+    localparam [15:0] DIV = 16'd1301;
     reg  [15:0] brg_cnt;
     reg  enable_pulse;
     always @(posedge clk) begin
@@ -109,8 +109,8 @@ localparam TX_STOP  = 2'd3;
                             tx_state <= TX_STOP;           // after 8 bits, go to stop
                         end else begin
                             tx_bitcnt <= tx_bitcnt + 3'd1; // next bit
+                            tx_buf <= {1'b0, tx_buf[7:1]};     // shift right, LSB first
                         end
-                        tx_buf <= {1'b0, tx_buf[7:1]};     // shift right, LSB first
                     end
                 end
                 TX_STOP: begin
@@ -122,7 +122,9 @@ localparam TX_STOP  = 2'd3;
             endcase
         end
     end
-    assign txd = (tx_state == TX_IDLE) ? 1'b1 : tx_buf[0]; // idle high, data on LSB
+    assign txd = (tx_state == TX_IDLE || tx_state == TX_STOP) ? 1'b1 : 
+             (tx_state == TX_START)                        ? 1'b0 : 
+                                                             tx_buf[0];
 
 
 localparam RX_IDLE  = 2'd0;
