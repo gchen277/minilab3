@@ -29,5 +29,16 @@ module driver(
     inout [7:0] databus
     );
 
+    driver_sv inst(
+        .i_clk(clk),
+        .i_rst(rst),
+        .i_br_cfg(br_cfg),
+        .o_iocs(iocs),
+        .o_iorw(iorw),
+        .i_rda(rda),
+        .i_tbr(tbr),
+        .o_ioaddr(ioaddr),
+        .io_databus(databus)
+    );
 
 endmodule
