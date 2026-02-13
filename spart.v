@@ -1,3 +1,4 @@
+`default_nettype none
 //////////////////////////////////////////////////////////////////////////////////
 // Company: 
 // Engineer: 
@@ -25,18 +26,23 @@ module spart(
     output rda,
     output tbr,
     input [1:0] ioaddr,
-    inout [7:0] databus,
+    inout  wire  [7:0] databus,
     output txd,
     input rxd
     );
     
     reg [7:0] db_out;
-    wire db_drive = iocs && iorw;      // only drive during reads
+    wire db_drive;
+    assign db_drive = iocs && iorw; 
     assign databus = db_drive ? db_out : 8'hZZ;
-    wire [7:0] db_in = databus;
+    
+    wire [7:0] db_in;
+    assign db_in = databus;
 
-    wire bus_wr = iocs && ~iorw;
-    wire bus_rd = iocs &&  iorw;
+    wire bus_wr;
+    assign bus_wr = iocs && ~iorw;
+    wire bus_rd;
+    assign bus_rd = iocs &&  iorw;
 
     reg [7:0] rx_buf;
     reg       rx_full;   // RDA flag
@@ -51,27 +57,41 @@ module spart(
     always @(*) begin
      case (ioaddr)
             2'b00: db_out = rx_buf;
+            2'b01: db_out = {6'b0, tbr, rda}; // STATUS register
             default: db_out = 8'h00;
         endcase
     end
 
-    localparam [15:0] DIV = 16'd1301;
+    reg [15:0] DIV;
+    
+    always @(posedge clk) begin
+        if (!rst_n) begin
+            DIV <= 16'd1301;
+        end else if (bus_wr) begin
+            case (ioaddr)
+                2'b10: DIV[7:0]  <= db_in;
+                2'b11: DIV[15:8] <= db_in;
+            endcase
+        end
+    end
+
+    
     reg  [15:0] brg_cnt;
     reg  enable_pulse;
     always @(posedge clk) begin
-        if (!rst_n) begin
+    if (!rst_n) begin
+        brg_cnt <= 16'd1301;
+        enable_pulse <= 1'b0;
+    end else begin
+        enable_pulse <= 1'b0;
+        if (brg_cnt == 16'd0) begin
             brg_cnt <= DIV;
-            enable_pulse <= 1'b0;
+            enable_pulse <= 1'b1;
         end else begin
-            enable_pulse <= 1'b0;
-            if (brg_cnt == 16'd0) begin
-                brg_cnt <= DIV;
-                enable_pulse <= 1'b1;
-            end else begin
-                brg_cnt <= brg_cnt - 16'd1;
-            end
+            brg_cnt <= brg_cnt - 16'd1;
         end
     end
+end
 
 
 
